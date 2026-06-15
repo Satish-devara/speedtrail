@@ -9,5 +9,10 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "node_modules/sqlite3/build/Release/*.node"
+    }
+  }
 }
