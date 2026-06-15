@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed": "node backend/seed.js",
-    "test:parser": "node backend/test-parser.js"
+    "test:parser": "node backend/test-parser.js",
+    "test:settlements": "node backend/test-settlements.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
