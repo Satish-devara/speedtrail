@@ -9,7 +9,6 @@ let sqlite3;
 let useMock = false;
 
 try {
-  // Use top-level await dynamic import to prevent static import failures
   const sqliteModule = await import('sqlite3');
   sqlite3 = sqliteModule.default || sqliteModule;
 } catch (e) {
@@ -50,7 +49,6 @@ if (!useMock) {
   }
 }
 
-// Check database initialization status (for real SQLite mode)
 function initializeDatabase(dbInstance) {
   dbInstance.get("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", [], (err, row) => {
     if (err) return;
@@ -76,21 +74,52 @@ function runAutoSeed(dbInstance) {
     const users = ['Aisha', 'Rohan', 'Priya', 'Meera', 'Sam', 'Dev'];
     const userIds = {};
     let count = 0;
-    users.forEach(name => {
-      dbInstance.run("INSERT INTO users (name, email) VALUES (?, ?)", [name, `${name.toLowerCase()}@example.com`], function() {
-        userIds[name] = this.lastID;
-        count++;
-        if (count === users.length) {
-          dbInstance.run("INSERT INTO groups (name, description) VALUES (?, ?)", ['Apartment 4B', 'Shared flatmates group'], function() {
-            const gid = this.lastID;
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Aisha'], '2026-02-01 00:00:00']);
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Rohan'], '2026-02-01 00:00:00']);
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Priya'], '2026-02-01 00:00:00']);
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at, left_at) VALUES (?, ?, ?, ?)", [gid, userIds['Meera'], '2026-02-01 00:00:00', '2026-03-31 23:59:59']);
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Sam'], '2026-04-15 00:00:00']);
-            dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at, left_at) VALUES (?, ?, ?, ?)", [gid, userIds['Dev'], '2026-02-15 00:00:00', '2026-03-15 23:59:59']);
-          });
-        }
+    
+    dbInstance.serialize(() => {
+      users.forEach(name => {
+        dbInstance.run("INSERT INTO users (name, email) VALUES (?, ?)", [name, `${name.toLowerCase()}@example.com`], function() {
+          userIds[name] = this.lastID;
+          count++;
+          if (count === users.length) {
+            dbInstance.run("INSERT INTO groups (name, description) VALUES (?, ?)", ['Apartment 4B', 'Shared flatmates group'], function() {
+              const gid = this.lastID;
+              
+              // Seed memberships
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Aisha'], '2026-02-01 00:00:00']);
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Rohan'], '2026-02-01 00:00:00']);
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Priya'], '2026-02-01 00:00:00']);
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at, left_at) VALUES (?, ?, ?, ?)", [gid, userIds['Meera'], '2026-02-01 00:00:00', '2026-03-31 23:59:59']);
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at) VALUES (?, ?, ?)", [gid, userIds['Sam'], '2026-04-15 00:00:00']);
+              dbInstance.run("INSERT INTO group_memberships (group_id, user_id, joined_at, left_at) VALUES (?, ?, ?, ?)", [gid, userIds['Dev'], '2026-02-15 00:00:00', '2026-03-15 23:59:59']);
+
+              // Seed clean historical transactions
+              dbInstance.run("INSERT INTO expenses (id, group_id, paid_by_user_id, description, amount, currency, exchange_rate_to_inr, amount_inr, expense_date, split_type, status) VALUES (1, 1, 1, 'February Groceries', 1200, 'INR', 1.0, 1200, '2026-02-10 12:00:00', 'EQUAL', 'FINALIZED')");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (1, 1, 0, 300)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (1, 2, 0, 300)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (1, 3, 0, 300)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (1, 4, 0, 300)");
+
+              dbInstance.run("INSERT INTO expenses (id, group_id, paid_by_user_id, description, amount, currency, exchange_rate_to_inr, amount_inr, expense_date, split_type, status) VALUES (2, 1, 2, 'March Rent', 8000, 'INR', 1.0, 8000, '2026-03-01 10:00:00', 'EQUAL', 'FINALIZED')");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (2, 1, 0, 2000)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (2, 2, 0, 2000)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (2, 3, 0, 2000)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (2, 4, 0, 2000)");
+
+              dbInstance.run("INSERT INTO expenses (id, group_id, paid_by_user_id, description, amount, currency, exchange_rate_to_inr, amount_inr, expense_date, split_type, status) VALUES (3, 1, 2, 'Trip Taxi', 60, 'USD', 83.0, 4980, '2026-02-25 18:00:00', 'EQUAL', 'FINALIZED')");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (3, 2, 0, 1660)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (3, 3, 0, 1660)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (3, 6, 0, 1660)");
+
+              dbInstance.run("INSERT INTO expenses (id, group_id, paid_by_user_id, description, amount, currency, exchange_rate_to_inr, amount_inr, expense_date, split_type, status) VALUES (4, 1, 3, 'April Internet', 1500, 'INR', 1.0, 1500, '2026-04-18 14:00:00', 'EQUAL', 'FINALIZED')");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (4, 1, 0, 375)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (4, 2, 0, 375)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (4, 3, 0, 375)");
+              dbInstance.run("INSERT INTO expense_splits (expense_id, user_id, split_value, calculated_amount_inr) VALUES (4, 5, 0, 375)");
+
+              dbInstance.run("INSERT INTO settlements (id, group_id, from_user_id, to_user_id, amount, currency, exchange_rate_to_inr, amount_inr, settled_date) VALUES (1, 1, 4, 2, 2300, 'INR', 1.0, 2300, '2026-03-28 15:00:00')");
+            });
+          }
+        });
       });
     });
   });
@@ -120,33 +149,53 @@ const mockDb = {
     { id: 5, group_id: 1, user_id: 5, joined_at: '2026-04-15 00:00:00', left_at: null },
     { id: 6, group_id: 1, user_id: 6, joined_at: '2026-02-15 00:00:00', left_at: '2026-03-15 23:59:59' }
   ],
-  expenses: [],
-  expenseSplits: [],
-  settlements: [],
+  expenses: [
+    { id: 1, group_id: 1, paid_by_user_id: 1, description: 'February Groceries', amount: 1200, currency: 'INR', exchange_rate_to_inr: 1, amount_inr: 1200, expense_date: '2026-02-10 12:00:00', split_type: 'EQUAL', status: 'FINALIZED' },
+    { id: 2, group_id: 1, paid_by_user_id: 2, description: 'March Rent', amount: 8000, currency: 'INR', exchange_rate_to_inr: 1, amount_inr: 8000, expense_date: '2026-03-01 10:00:00', split_type: 'EQUAL', status: 'FINALIZED' },
+    { id: 3, group_id: 1, paid_by_user_id: 2, description: 'Trip Taxi', amount: 60, currency: 'USD', exchange_rate_to_inr: 83, amount_inr: 4980, expense_date: '2026-02-25 18:00:00', split_type: 'EQUAL', status: 'FINALIZED' },
+    { id: 4, group_id: 1, paid_by_user_id: 3, description: 'April Internet', amount: 1500, currency: 'INR', exchange_rate_to_inr: 1, amount_inr: 1500, expense_date: '2026-04-18 14:00:00', split_type: 'EQUAL', status: 'FINALIZED' }
+  ],
+  expenseSplits: [
+    { id: 1, expense_id: 1, user_id: 1, split_value: 0, calculated_amount_inr: 300 },
+    { id: 2, expense_id: 1, user_id: 2, split_value: 0, calculated_amount_inr: 300 },
+    { id: 3, expense_id: 1, user_id: 3, split_value: 0, calculated_amount_inr: 300 },
+    { id: 4, expense_id: 1, user_id: 4, split_value: 0, calculated_amount_inr: 300 },
+    
+    { id: 5, expense_id: 2, user_id: 1, split_value: 0, calculated_amount_inr: 2000 },
+    { id: 6, expense_id: 2, user_id: 2, split_value: 0, calculated_amount_inr: 2000 },
+    { id: 7, expense_id: 2, user_id: 3, split_value: 0, calculated_amount_inr: 2000 },
+    { id: 8, expense_id: 2, user_id: 4, split_value: 0, calculated_amount_inr: 2000 },
+    
+    { id: 9, expense_id: 3, user_id: 2, split_value: 0, calculated_amount_inr: 1660 },
+    { id: 10, expense_id: 3, user_id: 3, split_value: 0, calculated_amount_inr: 1660 },
+    { id: 11, expense_id: 3, user_id: 6, split_value: 0, calculated_amount_inr: 1660 },
+    
+    { id: 12, expense_id: 4, user_id: 1, split_value: 0, calculated_amount_inr: 375 },
+    { id: 13, expense_id: 4, user_id: 2, split_value: 0, calculated_amount_inr: 375 },
+    { id: 14, expense_id: 4, user_id: 3, split_value: 0, calculated_amount_inr: 375 },
+    { id: 15, expense_id: 4, user_id: 5, split_value: 0, calculated_amount_inr: 375 }
+  ],
+  settlements: [
+    { id: 1, group_id: 1, from_user_id: 4, to_user_id: 2, amount: 2300, currency: 'INR', exchange_rate_to_inr: 1, amount_inr: 2300, settled_date: '2026-03-28 15:00:00' }
+  ],
   anomalies: [],
   nextId: {
-    expenses: 1,
-    expenseSplits: 1,
-    settlements: 1,
+    expenses: 5,
+    expenseSplits: 16,
+    settlements: 2,
     anomalies: 1
   }
 };
 
-// SQL string pattern router
 function routeMockQuery(sql, params) {
   const sqlLower = sql.toLowerCase().trim();
 
-  // 1. SELECT * FROM users
   if (sqlLower.startsWith('select * from users') && !sqlLower.includes('where')) {
     return mockDb.users;
   }
-
-  // 2. SELECT * FROM groups
   if (sqlLower.startsWith('select * from groups')) {
     return mockDb.groups;
   }
-
-  // 3. SELECT u.id, u.name, m.joined_at, m.left_at FROM users u JOIN group_memberships
   if (sqlLower.includes('join group_memberships') && sqlLower.includes('m.group_id = ?')) {
     const gid = params[0];
     const results = [];
@@ -165,8 +214,6 @@ function routeMockQuery(sql, params) {
     });
     return results;
   }
-
-  // 4. SELECT paid_by_user_id, SUM(amount_inr) FROM expenses WHERE group_id = ? AND status = 'FINALIZED'
   if (sqlLower.includes('sum(amount_inr)') && sqlLower.includes('from expenses') && sqlLower.includes('group_id = ?') && sqlLower.includes('paid_by_user_id')) {
     const gid = params[0];
     const summary = {};
@@ -180,8 +227,6 @@ function routeMockQuery(sql, params) {
       total_paid: v
     }));
   }
-
-  // 5. SELECT s.user_id, SUM(s.calculated_amount_inr) FROM expense_splits JOIN expenses
   if (sqlLower.includes('sum(s.calculated_amount_inr)') && sqlLower.includes('expense_splits s') && sqlLower.includes('group_id = ?')) {
     const gid = params[0];
     const summary = {};
@@ -196,8 +241,6 @@ function routeMockQuery(sql, params) {
       total_owed: v
     }));
   }
-
-  // 6. SELECT from_user_id, SUM(amount_inr) FROM settlements WHERE group_id = ?
   if (sqlLower.includes('sum(amount_inr)') && sqlLower.includes('from settlements') && sqlLower.includes('from_user_id')) {
     const gid = params[0];
     const summary = {};
@@ -211,8 +254,6 @@ function routeMockQuery(sql, params) {
       total_sent: v
     }));
   }
-
-  // 7. SELECT to_user_id, SUM(amount_inr) FROM settlements WHERE group_id = ?
   if (sqlLower.includes('sum(amount_inr)') && sqlLower.includes('from settlements') && sqlLower.includes('to_user_id')) {
     const gid = params[0];
     const summary = {};
@@ -226,27 +267,20 @@ function routeMockQuery(sql, params) {
       total_received: v
     }));
   }
-
-  // 8. SELECT users LOWER(name)
   if (sqlLower.includes('from users') && sqlLower.includes('lower(name) = ?')) {
     const lowerName = params[0].toLowerCase();
     return mockDb.users.find(u => u.name.toLowerCase() === lowerName) || null;
   }
-
-  // 9. SELECT group_memberships WHERE group_id = ? AND user_id = ?
   if (sqlLower.includes('from group_memberships') && sqlLower.includes('group_id = ?') && sqlLower.includes('user_id = ?')) {
     const gid = params[0];
     const uid = params[1];
     return mockDb.memberships.find(m => m.group_id === gid && m.user_id === uid) || null;
   }
-
-  // 10. SELECT duplicate expenses check
   if (sqlLower.includes('from expenses') && sqlLower.includes('description = ?') && sqlLower.includes('abs(amount - ?)')) {
     const desc = params[0];
     const amount = params[1];
     const dateStr = params[2].replace('%', '');
     const paidBy = params[3];
-
     return mockDb.expenses.find(e => 
       e.description === desc && 
       Math.abs(e.amount - amount) < 0.05 && 
@@ -254,18 +288,14 @@ function routeMockQuery(sql, params) {
       e.paid_by_user_id === paidBy
     ) || null;
   }
-
-  // 11. SELECT expenses paid by user
   if (sqlLower.includes('from expenses') && sqlLower.includes('paid_by_user_id = ?') && sqlLower.includes('finalized')) {
     const gid = params[0];
-    const uid = params[1];
+    const uid = parseInt(params[1]);
     return mockDb.expenses.filter(e => e.group_id === gid && e.paid_by_user_id === uid && e.status === 'FINALIZED');
   }
-
-  // 12. SELECT split shares for user audit
   if (sqlLower.includes('from expense_splits s') && sqlLower.includes('s.user_id = ?')) {
     const gid = params[0];
-    const uid = params[1];
+    const uid = parseInt(params[1]);
     const results = [];
     mockDb.expenseSplits.forEach(s => {
       if (s.user_id === uid) {
@@ -289,11 +319,9 @@ function routeMockQuery(sql, params) {
     });
     return results;
   }
-
-  // 13. SELECT settlements sent by user
   if (sqlLower.includes('from settlements s') && sqlLower.includes('s.from_user_id = ?')) {
     const gid = params[0];
-    const uid = params[1];
+    const uid = parseInt(params[1]);
     const results = [];
     mockDb.settlements.forEach(s => {
       if (s.group_id === gid && s.from_user_id === uid) {
@@ -311,11 +339,9 @@ function routeMockQuery(sql, params) {
     });
     return results;
   }
-
-  // 14. SELECT settlements received by user
   if (sqlLower.includes('from settlements s') && sqlLower.includes('s.to_user_id = ?')) {
     const gid = params[0];
-    const uid = params[1];
+    const uid = parseInt(params[1]);
     const results = [];
     mockDb.settlements.forEach(s => {
       if (s.group_id === gid && s.to_user_id === uid) {
@@ -333,8 +359,6 @@ function routeMockQuery(sql, params) {
     });
     return results;
   }
-
-  // 15. SELECT all pending anomalies
   if (sqlLower.includes('from import_anomalies') && sqlLower.includes('pending_review')) {
     if (sqlLower.includes('where id = ?')) {
       const aid = params[0];
@@ -342,10 +366,7 @@ function routeMockQuery(sql, params) {
     }
     return mockDb.anomalies.filter(a => a.status === 'PENDING_REVIEW');
   }
-
-  // 16. INSERT queries
   if (sqlLower.startsWith('insert into')) {
-    // Determine target table
     if (sqlLower.includes('expenses')) {
       const id = mockDb.nextId.expenses++;
       mockDb.expenses.push({
@@ -403,16 +424,12 @@ function routeMockQuery(sql, params) {
       return { id };
     }
   }
-
-  // 17. UPDATE queries
   if (sqlLower.startsWith('update')) {
     if (sqlLower.includes('import_anomalies')) {
-      // update status of anomaly
       const status = params[0];
       const resolvedAt = params[1];
       const resolvedBy = params[2];
       const aid = params[3];
-
       const a = mockDb.anomalies.find(an => an.id === aid);
       if (a) {
         a.status = status;
@@ -422,8 +439,6 @@ function routeMockQuery(sql, params) {
       return { changes: 1 };
     }
   }
-
-  // 18. DELETE queries
   if (sqlLower.startsWith('delete')) {
     if (sqlLower.includes('import_anomalies')) {
       mockDb.anomalies = [];
@@ -436,13 +451,8 @@ function routeMockQuery(sql, params) {
       return { changes: 1 };
     }
   }
-
   return [];
 }
-
-// ----------------------------------------------------
-// PUBLIC API IMPLEMENTATION
-// ----------------------------------------------------
 
 export function run(sql, params = []) {
   if (useMock) {
