@@ -200,8 +200,8 @@ function routeMockQuery(sql, params) {
     const gid = params[0];
     const results = [];
     mockDb.memberships.forEach(m => {
-      if (m.group_id === gid) {
-        const u = mockDb.users.find(user => user.id === m.user_id);
+      if (m.group_id == gid) {
+        const u = mockDb.users.find(user => user.id == m.user_id);
         if (u) {
           results.push({
             id: u.id,
@@ -218,7 +218,7 @@ function routeMockQuery(sql, params) {
     const gid = params[0];
     const summary = {};
     mockDb.expenses.forEach(e => {
-      if (e.group_id === gid && e.status === 'FINALIZED') {
+      if (e.group_id == gid && e.status === 'FINALIZED') {
         summary[e.paid_by_user_id] = (summary[e.paid_by_user_id] || 0) + e.amount_inr;
       }
     });
@@ -231,8 +231,8 @@ function routeMockQuery(sql, params) {
     const gid = params[0];
     const summary = {};
     mockDb.expenseSplits.forEach(s => {
-      const e = mockDb.expenses.find(exp => exp.id === s.expense_id);
-      if (e && e.group_id === gid && e.status === 'FINALIZED') {
+      const e = mockDb.expenses.find(exp => exp.id == s.expense_id);
+      if (e && e.group_id == gid && e.status === 'FINALIZED') {
         summary[s.user_id] = (summary[s.user_id] || 0) + s.calculated_amount_inr;
       }
     });
@@ -245,7 +245,7 @@ function routeMockQuery(sql, params) {
     const gid = params[0];
     const summary = {};
     mockDb.settlements.forEach(s => {
-      if (s.group_id === gid) {
+      if (s.group_id == gid) {
         summary[s.from_user_id] = (summary[s.from_user_id] || 0) + s.amount_inr;
       }
     });
@@ -258,7 +258,7 @@ function routeMockQuery(sql, params) {
     const gid = params[0];
     const summary = {};
     mockDb.settlements.forEach(s => {
-      if (s.group_id === gid) {
+      if (s.group_id == gid) {
         summary[s.to_user_id] = (summary[s.to_user_id] || 0) + s.amount_inr;
       }
     });
@@ -274,7 +274,7 @@ function routeMockQuery(sql, params) {
   if (sqlLower.includes('from group_memberships') && sqlLower.includes('group_id = ?') && sqlLower.includes('user_id = ?')) {
     const gid = params[0];
     const uid = params[1];
-    return mockDb.memberships.find(m => m.group_id === gid && m.user_id === uid) || null;
+    return mockDb.memberships.find(m => m.group_id == gid && m.user_id == uid) || null;
   }
   if (sqlLower.includes('from expenses') && sqlLower.includes('description = ?') && sqlLower.includes('abs(amount - ?)')) {
     const desc = params[0];
@@ -285,23 +285,23 @@ function routeMockQuery(sql, params) {
       e.description === desc && 
       Math.abs(e.amount - amount) < 0.05 && 
       e.expense_date.startsWith(dateStr) &&
-      e.paid_by_user_id === paidBy
+      e.paid_by_user_id == paidBy
     ) || null;
   }
   if (sqlLower.includes('from expenses') && sqlLower.includes('paid_by_user_id = ?') && sqlLower.includes('finalized')) {
     const gid = params[0];
-    const uid = parseInt(params[1]);
-    return mockDb.expenses.filter(e => e.group_id === gid && e.paid_by_user_id === uid && e.status === 'FINALIZED');
+    const uid = params[1];
+    return mockDb.expenses.filter(e => e.group_id == gid && e.paid_by_user_id == uid && e.status === 'FINALIZED');
   }
   if (sqlLower.includes('from expense_splits s') && sqlLower.includes('s.user_id = ?')) {
     const gid = params[0];
-    const uid = parseInt(params[1]);
+    const uid = params[1];
     const results = [];
     mockDb.expenseSplits.forEach(s => {
-      if (s.user_id === uid) {
-        const e = mockDb.expenses.find(exp => exp.id === s.expense_id);
-        if (e && e.group_id === gid && e.status === 'FINALIZED') {
-          const u = mockDb.users.find(user => user.id === e.paid_by_user_id);
+      if (s.user_id == uid) {
+        const e = mockDb.expenses.find(exp => exp.id == s.expense_id);
+        if (e && e.group_id == gid && e.status === 'FINALIZED') {
+          const u = mockDb.users.find(user => user.id == e.paid_by_user_id);
           results.push({
             id: e.id,
             description: e.description,
@@ -321,11 +321,11 @@ function routeMockQuery(sql, params) {
   }
   if (sqlLower.includes('from settlements s') && sqlLower.includes('s.from_user_id = ?')) {
     const gid = params[0];
-    const uid = parseInt(params[1]);
+    const uid = params[1];
     const results = [];
     mockDb.settlements.forEach(s => {
-      if (s.group_id === gid && s.from_user_id === uid) {
-        const u = mockDb.users.find(user => user.id === s.to_user_id);
+      if (s.group_id == gid && s.from_user_id == uid) {
+        const u = mockDb.users.find(user => user.id == s.to_user_id);
         results.push({
           id: s.id,
           amount: s.amount,
@@ -341,11 +341,11 @@ function routeMockQuery(sql, params) {
   }
   if (sqlLower.includes('from settlements s') && sqlLower.includes('s.to_user_id = ?')) {
     const gid = params[0];
-    const uid = parseInt(params[1]);
+    const uid = params[1];
     const results = [];
     mockDb.settlements.forEach(s => {
-      if (s.group_id === gid && s.to_user_id === uid) {
-        const u = mockDb.users.find(user => user.id === s.from_user_id);
+      if (s.group_id == gid && s.to_user_id == uid) {
+        const u = mockDb.users.find(user => user.id == s.from_user_id);
         results.push({
           id: s.id,
           amount: s.amount,
@@ -362,7 +362,7 @@ function routeMockQuery(sql, params) {
   if (sqlLower.includes('from import_anomalies') && sqlLower.includes('pending_review')) {
     if (sqlLower.includes('where id = ?')) {
       const aid = params[0];
-      return mockDb.anomalies.find(a => a.id === aid) || null;
+      return mockDb.anomalies.find(a => a.id == aid) || null;
     }
     return mockDb.anomalies.filter(a => a.status === 'PENDING_REVIEW');
   }
