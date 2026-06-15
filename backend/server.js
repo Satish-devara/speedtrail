@@ -480,7 +480,11 @@ app.post('/api/settle', async (req, res) => {
   }
 });
 
-// Start Express server
-app.listen(port, () => {
-  console.log(`Express API Server running at http://localhost:${port}`);
-});
+// Start Express server locally
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Express API Server running at http://localhost:${port}`);
+  });
+}
+
+export default app;
