@@ -53,3 +53,11 @@ This document records the architectural and product design decisions made during
 - **Decision**: Build a persistent login portal and profile switcher in the dashboard header.
 - **Why We Chose It**:
   - Simplifies live testing during evaluation sessions: the reviewer can switch from Sam (timeline view) to Rohan (audit view) to Meera (import review) in two clicks.
+
+---
+
+## 6. Structured Verification Tools
+- **Decision**: Provide dedicated CLI test scripts (test-parser.js, test-settlements.js) in the codebase, separate from the frontend.
+- **Why We Chose It**:
+  - Ensures a candidate can trace the database parsing and calculation logic during a live interview session without opening a web browser.
+  - Validates code changes instantaneously in the terminal to speed up local feedback.
